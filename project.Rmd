@@ -1,0 +1,96 @@
+---
+title: "Group Project"
+author: "Chuong Tran"
+date: "2023-04-05"
+output: pdf_document
+---
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache =TRUE)
+```
+
+```{r}
+heart_data <- read.csv("/Users/chuongtran/Library/Containers/com.microsoft.Excel/Data/Desktop/College/SPRING2023/MATH-4322/Project/heart_data.csv")
+heart_data$gender = as.factor(heart_data$gender)
+heart_data$smoke = as.factor(heart_data$smoke)
+heart_data$alco = as.factor(heart_data$alco)
+heart_data$active = as.factor(heart_data$active)
+```
+
+
+```{r cars}
+data.glm = glm(cardio ~ age+gender+height+weight+ap_hi+ap_lo+cholesterol+gluc+smoke+alco+active, family = "binomial", data = heart_data)
+summary(data.glm)
+```
+- Gender is not an important variable for the model. 
+- Age, height, weight, ap_hi, ap_lo, cholesterol, gluc, smole, alco, and active are significant variables for the model.
+-$\hat{p}(X) = \frac{exp(-8.49 + 1.49e-04*age + 1.53e-02*gender - 5.73e-03*height + 1.54e-02*weight + 3.95e-02*ap_hi + 3e-04*ap_lo + 5.23e-01*cholesterol - 1.18e-01*gluc - 1.32e-01*smoke -1.69e-01*alco -2.1e-01*active)}{1 + exp(-8.49 + 1.49e-04*age + 1.53e-02*gender - 5.73e-03*height + 1.54e-02*weight + 3.95e-02*ap_hi + 3e-04*ap_lo + 5.23e-01*cholesterol - 1.18e-01*gluc - 1.32e-01*smoke -1.69e-01*alco -2.1e-01*active)}$. 
+
+
+
+```{r}
+set.seed(101)
+sample <- sample.int(n = nrow(heart_data), size = round(.75*nrow(heart_data),0), replace=F)
+train <- heart_data[sample,]
+test <- heart_data[-sample,]
+```
+
+```{r}
+data.train = glm(cardio ~ age+gender+height+weight+ap_hi+ap_lo+cholesterol+gluc+smoke+alco+active, family = "binomial", data = train)
+summary(data.train)
+```
+```{r}
+glm.pred = predict.glm(data.train, newdata = test, type = "response")
+yHat <- glm.pred > 0.5
+table(test$cardio, yHat)
+```
+
+- Error rate = $\frac{2096 + 2730}{6777 + 2096 + 2730 + 5897}$ = 27.6%. 
+
+## Without Gender
+
+```{r}
+data.train2 = glm(cardio ~ age+height+weight+ap_hi+ap_lo+cholesterol+gluc+smoke+alco+active, family = "binomial", data = train)
+data.train3 = glm(cardio ~ -id -index -gender, family = "binomial", data = train)
+summary(data.train3)
+summary(data.train2)
+glm.pred2 = predict.glm(data.train2, newdata = test, type = "response")
+yHat2 <- glm.pred2 > 0.5
+table(test$cardio, yHat2)
+```
+- Error rate = $\frac{2096 + 2730}{6777 + 2096 + 2730 + 5897}$ = 27.6%. 
+
+```{r}
+# do for loop 10 times
+set.seed(10)
+error <- c()
+
+for (i in 1:10) {
+  
+  sampleLoop <- sample.int(n = nrow(heart_data), size = round(.75*nrow(heart_data),0), replace=F)
+  trainLoop <- heart_data[sampleLoop,]
+  testLoop <- heart_data[-sampleLoop,]
+  data.trainLoop = glm(cardio ~ age+height+weight+ap_hi+ap_lo+cholesterol+gluc+smoke+alco+active, family = "binomial", data = trainLoop)
+  glm.predLoop = predict.glm(data.trainLoop, newdata = testLoop, type = "response")
+  yHatLoop <- glm.predLoop > 0.5
+  tab = table(testLoop$cardio, yHatLoop)
+  
+  error[i] = (tab[1,2] + tab[2,1]) / sum(tab)
+} 
+
+mean(error)
+
+```
+## Random Forest
+```{r}
+set.seed(10)
+train.rf = sample(1:nrow(Boston),nrow(Boston)/2)
+rf = randomForest(medv ~., data = heart_data,
+subset = train,
+mtry = (ncol(Boston)-1)/3,
+importance = TRUE)
+yhat.rf = predict(rf.boston,newdata = Boston[-train,])
+mean((yhat.rf - boston.test)ˆ2)
+```
+
